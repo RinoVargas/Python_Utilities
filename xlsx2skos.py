@@ -1,5 +1,6 @@
 import sys
 import argparse
+import openpyxl
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 DESCRIPTION = '''
@@ -51,36 +52,45 @@ def parse_args(args):
 	return parser.parse_args(args)
 	
 def load_data(args):
-	''' Cargar los datos desde el archivo Excel.'''
-	
-	## TODO: abrir archivo excel ubicado en args.source
-	## if args.tab is None:
-	## 		leer desde primera pestaña
-	## else:
-	##		leer desde la pestaña args.tab
+#
+#	Cargar archivo .xlsx. 
+#
+	excel_document = openpyxl.load_workbook(args.source)
 
-	## parsear el archivo excel y completar los datos
+#
+#	Si la no se ingresó el parametro --tab, se leerá desde la primera pestaña.
+#
+	if args.tab is None:
+		first_cell_name = excel_document.sheetnames[0]
+		excel_sheet = excel_document[first_cell_name]
+	else:
+		excel_sheet = excel_document[args.tab]
 	
-	## DUMMY DATA:
-	metadata = {
-			"namespace": "http://purl.org/concytec-pe/ford_ocde"
-		}
-		
-	concepts = []
-	concepts.append({
-				"uri": "http://purl.org/concytec-pe/ford_ocde/01",
-				"definition_es": "Def de ccnn",
-				"prefLabel_es": "Ciencias Naturales",
-				"prefLabel_en": "Natural Sciences",
-				"broader": None
-			})
-	concepts.append({
-				"uri": "http://purl.org/concytec-pe/ford_ocde/01.01",
-				"definition_es": "Def de math",
-				"prefLabel_es": "Matemáticas",
-				"prefLabel_en": "Mathematics",
-				"broader": "http://purl.org/concytec-pe/ford_ocde/01"
-			})
+#
+#	Apunta la fila 4 del Excel y extrae los valores de las columnas (A,B,C,D,E), Una vez extraído 
+#	todas las columnas pasa a la siguiente fila.
+#
+#	Nota: Corta la iteración solo si la columna A (URI) no tiene valor (si es NoneType).
+#
+
+	row_num = 4
+	concepts = list()
+	metadata = excel_sheet.cell(1,2).value
+
+	while (True):
+
+	    if (excel_sheet.cell(row_num,1).value is None):
+	        break
+	    container = list()
+	    for i in range(1,6):
+	        container.append(excel_sheet.cell(row_num,i).value)
+	    values = dict(	uri = container[0],
+						definition_es = container[1], 
+						prefLabel_es = container[2], 
+						prefLabel_en = container[3], 
+						broader = container[4])
+	    concepts.append(values)            
+	    row_num+=1
 
 	return { "metadata": metadata, "concepts": concepts }
 
